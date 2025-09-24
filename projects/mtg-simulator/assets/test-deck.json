@@ -1,0 +1,31 @@
+{
+    "deckName": "Test Deck",
+    "cards": [
+        {
+            "name": "Plains",
+            "type": "Land",
+            "count": 10
+        },
+        {
+            "name": "Forest",
+            "type": "Land",
+            "count": 10
+        },
+        {
+            "name": "Grizzly Bears",
+            "type": "Creature",
+            "count": 4,
+            "mechanics": [
+                "None"
+            ]
+        },
+        {
+            "name": "Lightning Bolt",
+            "type": "Instant",
+            "count": 4,
+            "mechanics": [
+                "Direct Damage"
+            ]
+        }
+    ]
+}
