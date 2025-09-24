@@ -1,13 +1,58 @@
-/* MTG Deck Simulator Styles */
-body {
-    background-color: #2e2e2e;
-    color: #fff;
-    font-family: Arial, sans-serif;
-    text-align: center;
-}
+/* =======================
+ * Base styles for MTG Turn Engine (style.css)
+ * ======================= */
 
-#game-area {
-    border: 2px solid #fff;
-    padding: 20px;
-    margin-top: 20px;
+:root { --bg:#111; --bg2:#1b1b1b; --panel:#1b1b1b; --text:#eee; --muted:#888; --border:#333; }
+
+* { box-sizing:border-box; }
+html, body { height:100%; }
+body { margin:0; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+
+.app { display:grid; grid-template-columns: 1fr; gap:12px; padding:12px; }
+header { background:#222; padding:10px; border-radius:6px; border:1px solid var(--border); }
+h1 { margin:0 0 8px 0; font-size: 20px; }
+h2 { margin:0 0 8px 0; font-size: 16px; }
+
+.panel { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:10px; }
+.row { display:flex; align-items:center; gap:8px; }
+.stack { display:flex; flex-direction:column; gap:8px; }
+
+input[type=file], textarea { width:100%; background:#151515; color:#ddd; border:1px solid #333; border-radius:6px; padding:6px; }
+textarea { min-height: 90px; }
+
+.btn { background:#444; border:none; color:#fff; padding:6px 10px; border-radius:6px; cursor:pointer; }
+.btn:hover { background:#555; }
+.btn.good { background:#2e7d32; }
+.btn.good:hover { background:#388e3c; }
+.btn.danger { background:#c62828; }
+.btn.danger:hover { background:#e53935; }
+.btn.secondary { background:#1565c0; }
+.btn.secondary:hover { background:#1976d2; }
+.btn.ghost { background:transparent; border:1px solid #666; }
+
+.small { font-size: 0.85em; }
+.muted { color: var(--muted); }
+
+.kpi { display:flex; gap:8px; margin-bottom:8px; }
+.kpi .card { background:#222; border:1px solid #333; border-radius:6px; padding:8px; text-align:center; min-width:150px; }
+.kpi .label { color:#aaa; font-size:0.8em; }
+.kpi .value { font-size:1.2em; }
+
+.list { background:#222; border:1px solid #333; border-radius:6px; padding:8px; margin-top:8px; }
+.list ul { list-style:none; margin:0; padding:0; }
+.list li { padding:4px 0; }
+
+.phase-pill { background:#444; padding:2px 6px; border-radius:10px; }
+
+.tag { background:#444; padding:0 6px; border-radius:6px; font-size:0.8em; margin-left:4px; }
+.kw { background:#555; padding:0 4px; border-radius:4px; font-size:0.75em; margin-left:4px; }
+.counter { background:#222; border:1px solid #555; padding:0 4px; border-radius:4px; font-size:0.75em; margin-left:4px; }
+
+#effectsPopover { position:fixed; display:none; z-index:3000; background:#222; color:#fff; padding:10px; border:1px solid #666; border-radius:8px; max-width:260px; }
+#effectsPopover .title { font-weight:600; margin-bottom:6px; }
+#effectsPopover .text { font-size:0.9em; color:#ddd; }
+
+/* Responsive */
+@media (min-width: 1100px){
+  .app { grid-template-columns: 1fr 1fr; }
 }
