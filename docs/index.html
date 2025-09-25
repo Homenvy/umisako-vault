@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MTG Turn Engine</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Compact Floating Player Command Zone (bottom right hover) */
+    #playerCommandZone {
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      width: 380px; /* widened */
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 8px;
+      z-index: 2000;
+      color: #fff;
+    }
+    .pcz-header { display:flex; justify-content:space-between; padding:6px; border-top:1px solid #333; background:#111; }
+    .pcz-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+    .pcz-actions-right { display:flex; gap:6px; }
+    .pcz-tab { padding:6px 10px; background:#2a2a2a; border:none; color:#fff; cursor:pointer; border-radius:6px; }
+    .pcz-tab.active { background:#1565c0; }
+    .pcz-content { max-height:40vh; overflow-y:auto; padding:8px; display:none; background:transparent; }
+    .pcz-content.active { display:block; }
+    .pcz-card { background:#1e1e1e; border:1px solid #333; border-radius:8px; padding:6px; margin:4px 0; }
+    .pcz-infobar { padding:6px 8px; border-top:1px solid #333; background:#1a1a1a; }
+    .pcz-opp { font-size:0.85em; color:#bbb; margin-bottom:4px; }
+    .pcz-life-mana { display:flex; justify-content:space-between; align-items:center; }
+    .pcz-life .btn { margin:0 4px; }
+    .pcz-actions { margin-top:6px; }
+
+    /* Floating Deck Import Zone (left side) */
+    #importPanel {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      width: 320px;
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 8px;
+      z-index: 2000;
+    }
+    #importP0, #importP1 { display:none; }
+
+    /* Turn / Phase Zone (center top, wider) */
+    #centerPanel {
+      position: fixed;
+      top: 15%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px; /* wider */
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 8px;
+      z-index: 2000;
+    }
+    #bfP0, #bfP1 { display:flex; flex-wrap:wrap; gap:6px; }
+    .bf-land { align-self:flex-end; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>MTG Turn Engine</h1>
+      <div class="row">
+        <button id="btnNew" class="btn ghost">New Game</button>
+        <button id="btnNext" class="btn">Next Phase ▶</button>
+        <button id="btnEndTurn" class="btn ghost">End Turn ↪</button>
+        <button id="btnMulligan" class="btn danger">Mulligan</button>
+        <button id="btnTest" class="btn secondary">Self‑Test</button>
+        <span class="small muted">I am:</span>
+        <label class="small"><input type="radio" name="viewerSeat" id="seatP0" checked> P1</label>
+        <label class="small"><input type="radio" name="viewerSeat" id="seatP1"> P2</label>
+      </div>
+    </header>
+
+    <section class="panel" id="importPanel">
+      <h2>Deck Import</h2>
+      <div id="errorBox" class="small" style="min-height:1em;color:#6fd1ff"></div>
+      <div class="stack">
+        <div id="importP0">
+          <strong>Player 1</strong>
+          <input id="fileP0" type="file" accept="application/json" />
+          <textarea id="textP0"></textarea>
+          <div class="row">
+            <button id="btnLoadP0" class="btn ghost">Load P1 Deck</button>
+            <button id="btnShuffleP0" class="btn ghost">Shuffle</button>
+            <button id="btnDraw7P0" class="btn secondary">Draw 7</button>
+            <button id="btnDraw1P0" class="btn ghost">Draw 1</button>
+          </div>
+        </div>
+        <div id="importP1">
+          <strong>Player 2</strong>
+          <input id="fileP1" type="file" accept="application/json" />
+          <textarea id="textP1"></textarea>
+          <div class="row">
+            <button id="btnLoadP1" class="btn ghost">Load P2 Deck</button>
+            <button id="btnShuffleP1" class="btn ghost">Shuffle</button>
+            <button id="btnDraw7P1" class="btn secondary">Draw 7</button>
+            <button id="btnDraw1P1" class="btn ghost">Draw 1</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="centerPanel">
+      <h2>Turn / Phase</h2>
+      <div class="kpi">
+        <div class="card"><div class="label">Active Player</div><div class="value" id="activePlayer">P1</div></div>
+        <div class="card"><div class="label">Turn</div><div class="value" id="turnNumber">1</div></div>
+        <div class="card"><div class="label">Phase</div><div class="value"><span class="phase-pill" id="phaseName">UNTAP</span></div></div>
+      </div>
+      <div class="row">
+        <ul id="bfP0"></ul>
+        <ul id="bfP1"></ul>
+      </div>
+    </section>
+  </div>
+
+  <div id="effectsPopover"><div class="title" id="effTitle"></div><div class="text" id="effText"></div></div>
+
+  <!-- Floating Player Command Zone compact -->
+  <div id="playerCommandZone">
+    <div class="pcz-content active" id="pczHand">
+      <div id="pczHandList"></div>
+    </div>
+    <div class="pcz-content" id="pczCmd">
+      <div><strong id="pczCmdName">Commander: —</strong></div>
+      <div>Cost: <span id="pczCmdCost">—</span> · Tax: <span id="pczCmdTax">+0</span></div>
+      <div class="pcz-actions">
+        <button id="pczCastCmd" class="btn good">Cast Commander</button>
+        <button id="pczCmdEff" class="btn ghost">Effects</button>
+      </div>
+    </div>
+    <div class="pcz-content" id="pczGY">
+      <div id="pczGYList">(Empty Graveyard)</div>
+    </div>
+    <div class="pcz-content" id="pczExile">
+      <div id="pczExileList">(Empty Exile)</div>
+    </div>
+    <div class="pcz-infobar">
+      <div class="pcz-opp">Opponent — Library: <span id="pczOppLib">0</span> • Hand: <span id="pczOppHand">0</span></div>
+      <div class="pcz-life-mana">
+        <div class="pcz-life">Life: <button id="lifeMinus" class="btn ghost">−</button><strong id="pczLife">40</strong><button id="lifePlus" class="btn ghost">+</button></div>
+        <div class="pcz-mana">Mana: <span id="pczMana">W0 U0 B0 R0 G0 C0</span></div>
+      </div>
+    </div>
+    <div class="pcz-header">
+      <div class="pcz-tabs">
+        <button id="pczTabHand" class="pcz-tab active">Hand</button>
+        <button id="pczTabCmd" class="pcz-tab">Commander</button>
+        <button id="pczTabGY" class="pcz-tab">Graveyard</button>
+        <button id="pczTabExile" class="pcz-tab">Exiled</button>
+      </div>
+      <div class="pcz-actions-right">
+        <button id="pczDraw" class="btn ghost">Draw</button>
+        <button id="pczNextPhase" class="btn">Next ▶</button>
+        <button id="pczEndTurn" class="btn ghost">End ↪</button>
+      </div>
+    </div>
+  </div>
+	<!-- Mobile Thumb Dock + Bottom Sheet (add near end of body) -->
+	<div id="pczDock" class="pcz-dock" aria-hidden="true">
+	  <button id="pczDockCore" class="pcz-core" aria-label="Open zones">◎</button>
+
+	  <!-- Quarter-circle wheel -->
+	  <div id="pczWheel" class="pcz-wheel" role="tablist" aria-label="Player zones">
+		<button class="pcz-item" data-zone="hand" aria-selected="true">Hand</button>
+		<button class="pcz-item" data-zone="commander">Cmdr</button>
+		<button class="pcz-item" data-zone="graveyard">GY</button>
+		<button class="pcz-item" data-zone="exile">Exile</button>
+	  </div>
+	</div>
+
+	<!-- Bottom sheet for the currently selected zone -->
+	<div id="pczSheet" class="pcz-sheet" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Zone contents">
+	  <div class="pcz-sheet-header">
+		<div id="pczSheetTitle" class="pcz-sheet-title">Hand</div>
+		<button id="pczSheetClose" class="btn ghost">Close</button>
+	  </div>
+	  <div id="pczSheetContent" class="pcz-sheet-content">
+		<!-- populated by engine.js (reusing existing render) -->
+	  </div>
+	</div>
+
+	<!-- Effects popover already used by engine.js; include if not present -->
+	<div id="effectsPopover">
+	  <div id="effTitle" class="title">Card Effects</div>
+	  <div id="effText" class="text">(No rules text)</div>
+	</div>
+  <script src="engine.js"></script>
+
+  <script src="deck-autoload-addon.js"></script>
+  <script>
+    function activateTab(tabId){
+      document.querySelectorAll('.pcz-tab').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.pcz-content').forEach(c=>c.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      const btnId = 'pczTab'+tabId.replace('pcz','');
+      document.getElementById(btnId).classList.add('active');
+    }
+    document.getElementById('pczTabHand').onclick=()=>activateTab('pczHand');
+    document.getElementById('pczTabCmd').onclick=()=>activateTab('pczCmd');
+    document.getElementById('pczTabGY').onclick=()=>activateTab('pczGY');
+    document.getElementById('pczTabExile').onclick=()=>activateTab('pczExile');
+
+    document.addEventListener('click',(e)=>{
+      if(!e.target.classList.contains('pcz-eff') && e.target.id!=='pczCmdEff'){
+        document.getElementById('effectsPopover').style.display='none';
+      }
+    });
+
+    // Switch Deck Import panel based on radio button
+    const showImport=(pid)=>{
+      document.getElementById('importP0').style.display = pid===0?'block':'none';
+      document.getElementById('importP1').style.display = pid===1?'block':'none';
+    };
+    document.getElementById('seatP0').addEventListener('change',e=>{ if(e.target.checked) showImport(0); });
+    document.getElementById('seatP1').addEventListener('change',e=>{ if(e.target.checked) showImport(1); });
+    // init default
+    showImport(0);
+  </script>
+  
+</body>
+</html>
